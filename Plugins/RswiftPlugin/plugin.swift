@@ -12,21 +12,27 @@ import Foundation
     /// This plugin's implementation returns a single `prebuild` command to run `rswift`.
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
         let (sdkPath, _) = shell("xcrun", "--sdk", "macosx", "--show-sdk-path")
-
-        return [.buildCommand(
-            displayName: "Running R.swift",
-            executable: try context.tool(named: "rswift").path,
-            arguments: [
-                "generate", context.pluginWorkDirectory.appending("R.generated.swift"),
-                "--swiftPackage", context.package.directory.string,
-                "--target", target.name,
-                "--accessLevel", "public"
-            ],
-            environment: [
-                "SDKROOT": sdkPath ?? "",
-            ],
-            inputFiles: [],
-            outputFiles: [])
+        var sdkRoot: String? = nil
+        if let path = sdkPath, let rootPath = path.split(separator: "\n").first {
+            sdkRoot = "\(rootPath)"
+        }
+        return [
+            .prebuildCommand(
+                displayName: "Running R.swift",
+                executable: try context.tool(named: "rswift").path,
+                arguments: [
+                    "generate", context.pluginWorkDirectory.appending("R.generated.swift"),
+                    "--swiftPackage", context.package.directory.string,
+                    "--target", target.name,
+                    "--accessLevel", "public",
+                ],
+                environment: [
+                    //                    "SWIFT_PACKAGE": "\(context.package.directory)",
+                    //                    "TARGET_NAME": "\(target.name)",
+                    "SDKROOT": sdkRoot ?? "",
+                ],
+                outputFilesDirectory: context.pluginWorkDirectory
+            )
         ]
     }
 }
